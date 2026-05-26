@@ -1,4 +1,4 @@
-from fast_flights import FlightQuery, Passengers, create_query, get_flights
+from fast_flights import create_query, get_flights, FlightQuery, Passengers
 import asyncio
 import telegram
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 TELEGRAM_TOKEN = "8957881586:AAHOFcVSgQHPh5v16_M_Mv3Gra4umMVk1K0"
 CHAT_ID = 8082634911
 
-# Umbrales agresivos (basados en históricos)
+# Umbrales agresivos
 umbrales = {
     "MAD": 950000, "BCN": 950000, "FCO": 950000, "MXP": 950000,
     "LIS": 950000, "AMS": 950000,
@@ -50,20 +50,19 @@ async def main():
             flights = get_flights(query)
             
             for flight in flights[:3]:
-                precio = flight.price if hasattr(flight, 'price') else None
+                precio = getattr(flight, 'price', None)
                 if precio and precio < umbrales.get(destino, 950000):
                     mensaje = f"""🚨 **OFERTA IMPERDIBLE**
 
 {origen} → {destino} (ida y vuelta)
 💰 **${precio:,}**
 ⏱ {getattr(flight, 'duration', 'N/A')} | {getattr(flight, 'stops', 'N/A')} escalas
-📅 {fecha_ida}
 
-🔗 {getattr(flight, 'url', 'Buscar en Google Flights')}"""
+🔗 Ver oferta"""
 
                     await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
-                    print(f"✅ Alerta enviada: {origen}-{destino} ${precio}")
+                    print(f"✅ Alerta: {origen}-{destino} ${precio}")
         except Exception as e:
-            print(f"Error en {origen}-{destino}: {e}")
+            print(f"Error en {origen}-{destino}: {type(e).__name__} - {e}")
 
 asyncio.run(main())
