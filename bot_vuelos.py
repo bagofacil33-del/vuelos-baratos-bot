@@ -1,4 +1,4 @@
-from fast_flights import FlightQuery, Passengers, get_flights
+from fast_flights import FlightQuery, Passengers, create_query, get_flights
 import asyncio
 import telegram
 from datetime import datetime, timedelta
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 TELEGRAM_TOKEN = "8957881586:AAHOFcVSgQHPh5v16_M_Mv3Gra4umMVk1K0"
 CHAT_ID = 8082634911
 
-# Umbrales basados en históricos (agresivos)
+# Umbrales agresivos (basados en históricos)
 umbrales = {
     "MAD": 950000, "BCN": 950000, "FCO": 950000, "MXP": 950000,
     "LIS": 950000, "AMS": 950000,
@@ -37,30 +37,30 @@ async def main():
         fecha_vuelta = (datetime.now() + timedelta(days=50)).strftime("%Y-%m-%d")
 
         try:
-            # Nueva forma de usar la librería
-            query = get_flights(
-                origin=origen,
-                destination=destino,
-                departure_date=fecha_ida,
-                return_date=fecha_vuelta,
-                trip_type="round_trip",
-                travelers=Passengers(adults=1),
-                max_stops=2
+            query = create_query(
+                flights=[
+                    FlightQuery(date=fecha_ida, from_airport=origen, to_airport=destino),
+                    FlightQuery(date=fecha_vuelta, from_airport=destino, to_airport=origen)
+                ],
+                trip="round-trip",
+                seat="economy",
+                passengers=Passengers(adults=1),
             )
+
+            flights = get_flights(query)
             
-            flights = query[:5]  # Tomamos los primeros resultados
-            
-            for flight in flights:
-                precio = getattr(flight, 'price', None)
+            for flight in flights[:3]:
+                precio = flight.price if hasattr(flight, 'price') else None
                 if precio and precio < umbrales.get(destino, 950000):
                     mensaje = f"""🚨 **OFERTA IMPERDIBLE**
 
 {origen} → {destino} (ida y vuelta)
 💰 **${precio:,}**
 ⏱ {getattr(flight, 'duration', 'N/A')} | {getattr(flight, 'stops', 'N/A')} escalas
+📅 {fecha_ida}
 
-🔗 Ver en Google Flights"""
-                    
+🔗 {getattr(flight, 'url', 'Buscar en Google Flights')}"""
+
                     await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
                     print(f"✅ Alerta enviada: {origen}-{destino} ${precio}")
         except Exception as e:
