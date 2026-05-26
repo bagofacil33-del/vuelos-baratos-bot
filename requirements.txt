@@ -1,2 +1,2 @@
-fast-flights
+fast-flights==2.2.0
 python-telegram-bot>=21.0
